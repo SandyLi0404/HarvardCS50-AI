@@ -18,7 +18,7 @@ def load_data(directory):
     Load data from CSV files into memory.
     """
     # Load people
-    with open(f"{directory}/people.csv", encoding="utf-8") as f:
+    with open(f"lec0_search/{directory}/people.csv", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             people[row["id"]] = {
@@ -32,7 +32,7 @@ def load_data(directory):
                 names[row["name"].lower()].add(row["id"])
 
     # Load movies
-    with open(f"{directory}/movies.csv", encoding="utf-8") as f:
+    with open(f"lec0_search/{directory}/movies.csv", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             movies[row["id"]] = {
@@ -42,7 +42,7 @@ def load_data(directory):
             }
 
     # Load stars
-    with open(f"{directory}/stars.csv", encoding="utf-8") as f:
+    with open(f"lec0_search/{directory}/stars.csv", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
@@ -112,7 +112,6 @@ def shortest_path(source:int, target:int):
             path = list(reversed(path))
             # print(path)
             return path
-        
         else:
             explored.append(new_node.state)
             for p in neighbors_for_person(new_node.state):
