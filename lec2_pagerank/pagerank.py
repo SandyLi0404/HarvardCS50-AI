@@ -6,7 +6,7 @@ import sys
 DAMPING = 0.85 # damping factor
 SAMPLES = 10000 # number of samples use to estimate PageRank
 
-# run: ython lec2_pagerank\pagerank.py "D:\cs50\projects\lec2_pagerank\corpus0"
+# run: python lec2_pagerank\pagerank.py "D:\cs50\projects\lec2_pagerank\corpus0"
 
 def main():
     if len(sys.argv) != 2:
