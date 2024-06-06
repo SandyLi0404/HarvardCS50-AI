@@ -2,8 +2,6 @@ import csv
 import itertools
 import sys
 
-# run command: PS D:\cs50\projects> python lec2_heredity\heredity.py "D:\cs50\projects\lec2_heredity\data\family0.csv"
-
 PROBS = {
 
     # Unconditional probabilities for having gene
