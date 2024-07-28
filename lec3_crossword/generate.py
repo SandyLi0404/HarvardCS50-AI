@@ -116,7 +116,7 @@ class CrosswordCreator():
         Return True if a revision was made to the domain of `x`; return
         False if no revision was made.
         """
-        overlap = self.crossword.overlaps
+        overlap = self.crossword.overlaps[x, y]
         revised = False
         if overlap is None: # no overlap between two variables, no revision needed
             return revised
@@ -133,7 +133,7 @@ class CrosswordCreator():
         return revised
 
 
-    def ac3(self, arcs=None):
+    def ac3(self, arcs=None) -> bool:
         """
         Update `self.domains` such that each variable is arc consistent.
         If `arcs` is None, begin with initial list of all arcs in the problem.
@@ -142,21 +142,56 @@ class CrosswordCreator():
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
         """
-        raise NotImplementedError
+        if arcs == None:
+            arcs = []
+            for var in self.crossword.variables:
+                neighbors = self.crossword.neighbors(var) # set of variables
+                for neigbor_var in neighbors:
+                    if (((neigbor_var, var) or (var, neigbor_var)) in arcs): # ignore if already exist in arcs
+                        continue
+                    else:
+                        arcs.append((neigbor_var, var)) # add arc to arcs
+        while len(arcs) != 0:
+            (x, y) = arcs.pop(0) # dequeue
+            if self.revise(x=x, y=y): # if revised, need double check
+                if len(self.domains[x]) == 0: # unsolvable if x domain is empty
+                    return False
+                for z in self.crossword.neighbors(x):
+                    if z != y: # arcs that might be inconsistent, except Y
+                        arcs.append((z, x)) # add arc back to queue
+        return True
 
-    def assignment_complete(self, assignment):
+
+    def assignment_complete(self, assignment: dict) -> bool:
         """
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
-        raise NotImplementedError
+        for val in assignment.values():
+            if val is None:
+                return False
+        return True
+        
 
-    def consistent(self, assignment):
+    def consistent(self, assignment: dict) -> bool: # assignment may not be complete
         """
         Return True if `assignment` is consistent (i.e., words fit in crossword
         puzzle without conflicting characters); return False otherwise.
         """
-        raise NotImplementedError
+        values = []
+        for var, val in assignment.items():
+            if val in values: # value not unique
+                return False
+            if len(val) != var.length: # value not in correct length
+                return False
+            neighbors:set = self.crossword.neighbors(var)
+            for neighbor_var in neighbors: # conflict between neighboring vlaues
+                if neighbor_var in assignment: # only check if assignment contains neighbor_var
+                    (i, j) = self.crossword.overlaps[var, neighbor_var]
+                    if val[i] != assignment[neighbor_var][j]:
+                        return False
+            values.append[val]
+
 
     def order_domain_values(self, var, assignment):
         """
