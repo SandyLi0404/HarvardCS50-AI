@@ -193,16 +193,20 @@ class CrosswordCreator():
             values.append[val]
 
 
-    def order_domain_values(self, var, assignment):
+    def order_domain_values(self, var: Variable, assignment: dict) -> list:
         """
         Return a list of values in the domain of `var`, in order by
         the number of values they rule out for neighboring variables.
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        raise NotImplementedError
+        values = [val for val in self.domains[var]] # all the values in the domain of var
+        # TODO  least-constraining values heuristic
+        return values
+    
 
-    def select_unassigned_variable(self, assignment):
+
+    def select_unassigned_variable(self, assignment: dict) -> Variable:
         """
         Return an unassigned variable not already part of `assignment`.
         Choose the variable with the minimum number of remaining values
@@ -210,9 +214,20 @@ class CrosswordCreator():
         degree. If there is a tie, any of the tied variables are acceptable
         return values.
         """
-        raise NotImplementedError
+        unassigned_var = []
+        for var in self.crossword.variables:
+            if var not in assignment.keys():
+                unassigned_var.append(var) # add all unassigned variables to list
+        sorted_vars = sorted(unassigned_var, key=lambda var: len(self.domains[var]))
+        min_len = len(self.domains[sorted_vars[0]]) # sort the list with the # of remaining values in its domain
+        for var in sorted_vars: # only keep variables with the min # of remaining values
+            if len(self.domains[var]) > min_len:
+                sorted_vars.remove(var)
+        # TODO degree heuristic
+        return sorted_vars[0]
 
-    def backtrack(self, assignment):
+
+    def backtrack(self, assignment: dict):
         """
         Using Backtracking Search, take as input a partial assignment for the
         crossword and return a complete assignment if possible to do so.
@@ -221,8 +236,20 @@ class CrosswordCreator():
 
         If no assignment is possible, return None.
         """
-        raise NotImplementedError
 
+        # Check if assignment is complete
+        if len(assignment) == len(self.crossword.variables):
+            return assignment
+
+        var = self.select_unassigned_variable(assignment=assignment)
+        for value in self.domains[var]:
+            new_assignment = assignment.copy()
+            new_assignment[var] = value
+            if self.consistent(new_assignment):
+                result = self.backtrack(new_assignment)
+                if result is not None:
+                    return result
+        return None
 
 def main():
 
