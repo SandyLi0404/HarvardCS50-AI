@@ -3,7 +3,6 @@ import sys
 from crossword import *
 
 
-# crossword, domains (dict (var: words))
 class CrosswordCreator():
 
     def __init__(self, crossword):
@@ -102,9 +101,11 @@ class CrosswordCreator():
          constraints; in this case, the length of the word.)
         """
         for var in self.crossword.variables:
+            new_domain = self.domains[var].copy() # get a copy of domain of var
             for value in self.domains[var]:
                 if len(value) != var.length:
-                    self.domains[var].remove(value)
+                    new_domain.remove(value)
+            self.domains[var] = new_domain # update the domain of var
 
 
     def revise(self, x: Variable, y: Variable) -> bool:
@@ -118,9 +119,10 @@ class CrosswordCreator():
         """
         overlap = self.crossword.overlaps[x, y]
         revised = False
+        new_domain = self.domains[x].copy()
         if overlap is None: # no overlap between two variables, no revision needed
             return revised
-        i, j = overlap #  constraint: x's ith character overlaps y's jth character
+        (i, j) = overlap #  constraint: x's ith character overlaps y's jth character
         for xval in self.domains[x]:
             satisfied = False # if xval satisifes the constraint
             for yval in self.domains[y]:
@@ -128,8 +130,9 @@ class CrosswordCreator():
                     satisfied = True
                     break
             if not satisfied: # no yval in y's domain satisifies the constraint, remove xval from x's domain
-                self.domains[x].remove(xval)
+                new_domain.remove(xval)
                 revised = True
+        self.domains[x] = new_domain
         return revised
 
 
@@ -147,9 +150,7 @@ class CrosswordCreator():
             for var in self.crossword.variables:
                 neighbors = self.crossword.neighbors(var) # set of variables
                 for neigbor_var in neighbors:
-                    if (((neigbor_var, var) or (var, neigbor_var)) in arcs): # ignore if already exist in arcs
-                        continue
-                    else:
+                    if (neigbor_var, var) not in arcs:
                         arcs.append((neigbor_var, var)) # add arc to arcs
         while len(arcs) != 0:
             (x, y) = arcs.pop(0) # dequeue
@@ -167,6 +168,8 @@ class CrosswordCreator():
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
+        if len(self.crossword.variables) != len(assignment.keys()):
+            return False
         for val in assignment.values():
             if val is None:
                 return False
@@ -190,7 +193,8 @@ class CrosswordCreator():
                     (i, j) = self.crossword.overlaps[var, neighbor_var]
                     if val[i] != assignment[neighbor_var][j]:
                         return False
-            values.append[val]
+            values.append(val)
+        return True
 
 
     def order_domain_values(self, var: Variable, assignment: dict) -> list:
@@ -200,10 +204,21 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        values = [val for val in self.domains[var]] # all the values in the domain of var
-        # TODO  least-constraining values heuristic
-        return values
-    
+        values = [] # list to store (value, count) tuples
+        for val in self.domains[var]:
+            count = 0 # numbers of choices that val rules out for neighboring variables
+            
+            for neighbor_var in self.crossword.neighbors(var):
+                if neighbor_var not in assignment: # exclude vars present in assignment
+                    (i, j) = self.crossword.overlaps[var, neighbor_var]
+                    for neighbor_val in self.domains[neighbor_var]:
+                        if val[i] != neighbor_val[j]:
+                            count += 1 # val rules out one more possible choices for neighboring vars
+            values.append((val, count))
+        
+        sorted_val = sorted(values, key=lambda item: item[1]) # least-constraining values heuristic
+        return [val for (val, _) in sorted_val]       
+
 
 
     def select_unassigned_variable(self, assignment: dict) -> Variable:
@@ -218,13 +233,16 @@ class CrosswordCreator():
         for var in self.crossword.variables:
             if var not in assignment.keys():
                 unassigned_var.append(var) # add all unassigned variables to list
+
+        # sort the list with the number of remaining values in its domain
         sorted_vars = sorted(unassigned_var, key=lambda var: len(self.domains[var]))
-        min_len = len(self.domains[sorted_vars[0]]) # sort the list with the # of remaining values in its domain
-        for var in sorted_vars: # only keep variables with the min # of remaining values
+        min_len = len(self.domains[sorted_vars[0]])
+        for var in sorted_vars: # only keep variables with the min number of remaining values
             if len(self.domains[var]) > min_len:
                 sorted_vars.remove(var)
-        # TODO degree heuristic
-        return sorted_vars[0]
+        
+        sorted_degrees = sorted(sorted_vars, key=lambda var: len(self.crossword.neighbors(var))) # degree heuristic
+        return sorted_degrees[0]
 
 
     def backtrack(self, assignment: dict):
@@ -238,11 +256,11 @@ class CrosswordCreator():
         """
 
         # Check if assignment is complete
-        if len(assignment) == len(self.crossword.variables):
+        if self.assignment_complete(assignment=assignment):
             return assignment
 
         var = self.select_unassigned_variable(assignment=assignment)
-        for value in self.domains[var]:
+        for value in self.order_domain_values(var=var, assignment=assignment):
             new_assignment = assignment.copy()
             new_assignment[var] = value
             if self.consistent(new_assignment):
